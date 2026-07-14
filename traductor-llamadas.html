@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puente — Llamadas con traducción en vivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12181f;
+    --ink-2:#1c242e;
+    --paper:#f7f5f0;
+    --es:#d9762b;
+    --es-dim:#4a3320;
+    --en:#3b7a8c;
+    --en-dim:#1f333a;
+    --muted:#8b95a1;
+    --danger:#c44536;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  h1,h2,.display{font-family:'Sora',sans-serif;}
+  .app{
+    width:100%;
+    max-width:480px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:24px 20px;
+  }
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 4px 0;
+  }
+  h1{
+    font-size:28px;
+    font-weight:700;
+    margin:0 0 6px 0;
+    letter-spacing:-.01em;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.5;
+    margin:0 0 28px 0;
+  }
+  .card{
+    background:var(--ink-2);
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .lang-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:20px;
+  }
+  .lang-btn{
+    border:2px solid transparent;
+    background:#232c37;
+    color:var(--paper);
+    border-radius:14px;
+    padding:18px 12px;
+    font-family:'Sora',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .lang-btn .flag{font-size:22px;display:block;margin-bottom:6px;}
+  .lang-btn.active[data-lang="es"]{border-color:var(--es);background:var(--es-dim);}
+  .lang-btn.active[data-lang="en"]{border-color:var(--en);background:var(--en-dim);}
+  .btn{
+    width:100%;
+    padding:16px;
+    border:none;
+    border-radius:14px;
+    font-family:'Sora',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    transition:transform .1s ease, opacity .15s ease;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-primary{background:var(--paper);color:var(--ink);}
+  .btn-danger{background:var(--danger);color:var(--paper);}
+  .btn-ghost{background:transparent;border:1px solid #333e4b;color:var(--paper);}
+  .link-box{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    background:#0c1116;
+    border-radius:12px;
+    padding:12px 14px;
+    margin:14px 0;
+  }
+  .link-box input{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--paper);
+    font-size:13px;
+    font-family:monospace;
+    outline:none;
+  }
+  .copy-btn{
+    background:var(--paper);
+    color:var(--ink);
+    border:none;
+    border-radius:8px;
+    padding:8px 12px;
+    font-weight:600;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .status-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .dot{
+    width:8px;height:8px;border-radius:50%;background:var(--muted);
+  }
+  .dot.live{background:#4caf6d;box-shadow:0 0 0 0 rgba(76,175,109,.6);animation:pulse 1.6s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(76,175,109,.5);}
+    70%{box-shadow:0 0 0 8px rgba(76,175,109,0);}
+    100%{box-shadow:0 0 0 0 rgba(76,175,109,0);}
+  }
+  .call-header{
+    text-align:center;
+    padding:20px 0 8px;
+  }
+  .avatar-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:#232c37;
+    padding:8px 16px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .mic-ring{
+    width:14px;height:14px;border-radius:50%;
+    border:2px solid var(--muted);
+  }
+  .mic-ring.speaking{border-color:#4caf6d;box-shadow:0 0 0 0 rgba(76,175,109,.5);animation:pulse 1.2s infinite;}
+  .captions{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:16px 0;
+    overflow-y:auto;
+  }
+  .bubble{
+    max-width:85%;
+    padding:12px 14px;
+    border-radius:16px;
+    font-size:15px;
+    line-height:1.4;
+    animation:fadeIn .25s ease;
+  }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .bubble.mine{
+    align-self:flex-end;
+    background:#232c37;
+    border-bottom-right-radius:4px;
+  }
+  .bubble.theirs{
+    align-self:flex-start;
+    background:var(--ink-2);
+    border-bottom-left-radius:4px;
+    border-left:3px solid var(--en);
+  }
+  .bubble.mine{border-right:3px solid var(--es);}
+  .bubble .orig{
+    font-size:11px;
+    color:var(--muted);
+    margin-bottom:4px;
+    font-family:monospace;
+  }
+  .controls{
+    display:flex;
+    gap:10px;
+    padding-top:12px;
+  }
+  .icon-btn{
+    width:56px;height:56px;
+    border-radius:50%;
+    border:none;
+    background:#232c37;
+    color:var(--paper);
+    font-size:22px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .icon-btn.active-off{background:var(--danger);}
+  .end-btn{flex:1;background:var(--danger);color:var(--paper);border:none;border-radius:28px;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;cursor:pointer;}
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.5;}
+  .lang-tag{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.05em;
+    padding:2px 8px;
+    border-radius:6px;
+    margin-right:6px;
+  }
+  .lang-tag.es{background:var(--es-dim);color:var(--es);}
+  .lang-tag.en{background:var(--en-dim);color:var(--en);}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const STUN = { iceServers: [{ urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] }] };
+const app = document.getElementById('app');
+
+let state = {
+  screen: 'setup', // setup | waiting | call
+  myLang: null, // 'es' | 'en'
+  roomId: null,
+  isCaller: false,
+  micOn: true,
+  speaking: false,
+  peerConnected: false,
+  captions: [] // {mine:bool, text, orig, lang}
+};
+
+let pc = null, dataChannel = null, localStream = null, recognition = null;
+let pollTimer = null;
+let recognitionShouldRun = false;
+
+function render(){
+  if(state.screen === 'setup') return renderSetup();
+  if(state.screen === 'waiting') return renderWaiting();
+  if(state.screen === 'call') return renderCall();
+}
+
+function renderSetup(){
+  const joining = !!state.roomId;
+  app.innerHTML = `
+    <p class="eyebrow">Puente</p>
+    <h1>${joining ? 'Te invitaron a una llamada' : 'Llama y entiéndanse'}</h1>
+    <p class="sub">${joining ? 'Elige el idioma en el que tú vas a hablar para conectarte.' : 'Una llamada de voz con traducción en vivo entre español e inglés. Elige el idioma en el que tú vas a hablar.'}</p>
+    <div class="card">
+      <div class="lang-grid">
+        <button class="lang-btn" data-lang="es" onclick="selectLang('es')">
+          <span class="flag">🇲🇽</span>Hablo español
+        </button>
+        <button class="lang-btn" data-lang="en" onclick="selectLang('en')">
+          <span class="flag">🇺🇸</span>I speak English
+        </button>
+      </div>
+      <button class="btn btn-primary" id="startBtn" disabled>${joining ? 'Unirme a la llamada' : 'Crear llamada'}</button>
+    </div>
+    <p class="hint">${joining ? 'Se necesita micrófono y un navegador basado en Chrome.' : 'La otra persona abre el link que le compartas y elige su propio idioma. Se necesita micrófono y un navegador basado en Chrome (Chrome, Edge, Android). Safari/iOS tiene soporte limitado de reconocimiento de voz.'}</p>
+  `;
+  const btn = document.querySelectorAll('.lang-btn');
+  btn.forEach(b => b.classList.toggle('active', b.dataset.lang === state.myLang));
+  document.getElementById('startBtn').disabled = !state.myLang;
+  document.getElementById('startBtn').onclick = joining ? () => joinAsCallee(state.roomId) : () => startAsCaller();
+}
+
+function selectLang(lang){
+  state.myLang = lang;
+  render();
+}
+
+function renderWaiting(){
+  const link = location.href;
+  app.innerHTML = `
+    <p class="eyebrow">Puente</p>
+    <h1>Comparte este link</h1>
+    <p class="sub">Envíaselo a la otra persona. En cuanto lo abra, la llamada conecta sola.</p>
+    <div class="card">
+      <div class="status-row"><span class="dot live"></span> Esperando conexión…</div>
+      <div class="link-box">
+        <input readonly value="${link}" id="linkInput">
+        <button class="copy-btn" onclick="copyLink()">Copiar</button>
+      </div>
+      <button class="btn btn-ghost" onclick="cancelCall()">Cancelar</button>
+    </div>
+    <p class="hint">Tú hablas en ${state.myLang==='es'?'español':'inglés'}. Deja esta pestaña abierta.</p>
+  `;
+}
+
+function copyLink(){
+  const input = document.getElementById('linkInput');
+  input.select();
+  navigator.clipboard?.writeText(input.value);
+}
+
+function renderCall(){
+  const otherLang = state.myLang === 'es' ? 'en' : 'es';
+  app.innerHTML = `
+    <div class="call-header">
+      <div class="status-row" style="justify-content:center;">
+        <span class="dot ${state.peerConnected ? 'live' : ''}"></span>
+        ${state.peerConnected ? 'Conectado' : 'Conectando…'}
+      </div>
+      <div class="avatar-badge">
+        <span class="mic-ring ${state.speaking ? 'speaking':''}"></span>
+        Tú hablas <span class="lang-tag ${state.myLang}">${state.myLang.toUpperCase()}</span>
+      </div>
+    </div>
+    <div class="captions" id="captions"></div>
+    <div class="controls">
+      <button class="icon-btn ${state.micOn ? '' : 'active-off'}" onclick="toggleMic()">${state.micOn ? '🎙️' : '🔇'}</button>
+      <button class="end-btn" onclick="endCall()">Colgar</button>
+    </div>
+    <p class="hint">Traducción automática: <span class="lang-tag es">ES</span> ↔ <span class="lang-tag en">EN</span>. Habla con pausas cortas para mejor precisión.</p>
+  `;
+  renderCaptions();
+}
+
+function renderCaptions(){
+  const el = document.getElementById('captions');
+  if(!el) return;
+  el.innerHTML = state.captions.map(c => `
+    <div class="bubble ${c.mine ? 'mine' : 'theirs'}">
+      <div class="orig">${c.mine ? 'Tú dijiste' : 'Traducido para ti'}</div>
+      ${escapeHtml(c.text)}
+    </div>
+  `).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ---------- Room / signaling (via shared artifact storage as a relay) ----------
+
+function genRoomId(){
+  return Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
+}
+
+async function startAsCaller(){
+  state.roomId = genRoomId();
+  state.isCaller = true;
+  const url = new URL(location.href);
+  url.hash = 'room=' + state.roomId;
+  history.replaceState(null, '', url);
+  state.screen = 'waiting';
+  render();
+  await setupPeerConnection();
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await storeSet(`call:${state.roomId}:offer`, JSON.stringify({sdp:offer, lang:state.myLang}));
+  pollForAnswer();
+}
+
+async function joinAsCallee(roomId){
+  state.roomId = roomId;
+  state.isCaller = false;
+  await setupPeerConnection();
+  const offerData = await storeGet(`call:${state.roomId}:offer`);
+  if(!offerData){
+    alert('No se encontró la llamada. Puede que ya haya expirado.');
+    return;
+  }
+  const parsed = JSON.parse(offerData);
+  await pc.setRemoteDescription(parsed.sdp);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await storeSet(`call:${state.roomId}:answer`, JSON.stringify({sdp:answer}));
+  state.screen = 'call';
+  render();
+  pollForCandidates('caller');
+}
+
+function pollForAnswer(){
+  pollTimer = setInterval(async () => {
+    const data = await storeGet(`call:${state.roomId}:answer`);
+    if(data){
+      clearInterval(pollTimer);
+      const parsed = JSON.parse(data);
+      await pc.setRemoteDescription(parsed.sdp);
+      state.screen = 'call';
+      render();
+      pollForCandidates('callee');
+    }
+  }, 1500);
+}
+
+function pollForCandidates(remoteRole){
+  const key = `call:${state.roomId}:candidates:${remoteRole}`;
+  let seen = 0;
+  const t = setInterval(async () => {
+    const data = await storeGet(key);
+    if(data){
+      const list = JSON.parse(data);
+      for(let i=seen;i<list.length;i++){
+        try{ await pc.addIceCandidate(list[i]); }catch(e){}
+      }
+      seen = list.length;
+    }
+    if(state.screen !== 'call' && state.screen !== 'waiting'){ clearInterval(t); }
+  }, 1500);
+}
+
+async function pushLocalCandidate(cand){
+  const myRole = state.isCaller ? 'caller' : 'callee';
+  const key = `call:${state.roomId}:candidates:${myRole}`;
+  let list = [];
+  const existing = await storeGet(key);
+  if(existing){ list = JSON.parse(existing); }
+  list.push(cand);
+  await storeSet(key, JSON.stringify(list));
+}
+
+async function storeGet(key){
+  try{
+    const res = await window.storage.get(key, true);
+    return res ? res.value : null;
+  }catch(e){ return null; }
+}
+async function storeSet(key, value){
+  try{ await window.storage.set(key, value, true); }catch(e){}
+}
+
+function cancelCall(){
+  clearInterval(pollTimer);
+  if(pc) pc.close();
+  state.screen = 'setup';
+  state.roomId = null;
+  history.replaceState(null, '', location.pathname);
+  render();
+}
+
+function endCall(){
+  clearInterval(pollTimer);
+  if(recognition){ recognitionShouldRun = false; try{recognition.stop();}catch(e){} }
+  if(pc) pc.close();
+  if(localStream) localStream.getTracks().forEach(t => t.stop());
+  state = {screen:'setup', myLang:null, roomId:null, isCaller:false, micOn:true, speaking:false, peerConnected:false, captions:[]};
+  history.replaceState(null, '', location.pathname);
+  render();
+}
+
+// ---------- WebRTC ----------
+
+async function setupPeerConnection(){
+  pc = new RTCPeerConnection(STUN);
+  localStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+  pc.onicecandidate = (e) => {
+    if(e.candidate) pushLocalCandidate(e.candidate.toJSON());
+  };
+  pc.onconnectionstatechange = () => {
+    if(pc.connectionState === 'connected'){
+      state.peerConnected = true;
+      if(state.screen === 'call') render();
+      startSpeechRecognition();
+    }
+  };
+  pc.ontrack = (e) => {
+    const audioEl = document.createElement('audio');
+    audioEl.autoplay = true;
+    audioEl.srcObject = e.streams[0];
+    document.body.appendChild(audioEl);
+  };
+
+  if(state.isCaller){
+    dataChannel = pc.createDataChannel('captions');
+    setupDataChannel(dataChannel);
+  } else {
+    pc.ondatachannel = (e) => {
+      dataChannel = e.channel;
+      setupDataChannel(dataChannel);
+    };
+  }
+}
+
+function setupDataChannel(dc){
+  dc.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if(msg.type === 'caption'){
+      state.captions.push({mine:false, text: msg.translated, orig: msg.original});
+      if(state.screen === 'call') { render(); }
+      speakText(msg.translated, state.myLang);
+    }
+  };
+}
+
+function sendCaption(original, translated){
+  if(dataChannel && dataChannel.readyState === 'open'){
+    dataChannel.send(JSON.stringify({type:'caption', original, translated}));
+  }
+}
+
+// ---------- Speech recognition ----------
+
+function startSpeechRecognition(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    alert('Tu navegador no soporta reconocimiento de voz. Prueba con Chrome.');
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = state.myLang === 'es' ? 'es-MX' : 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognitionShouldRun = true;
+
+  recognition.onstart = () => { state.speaking = true; if(state.screen==='call') updateSpeakingUI(); };
+  recognition.onspeechend = () => { state.speaking = false; if(state.screen==='call') updateSpeakingUI(); };
+
+  recognition.onresult = async (event) => {
+    const result = event.results[event.results.length - 1];
+    if(result.isFinal){
+      const text = result[0].transcript.trim();
+      if(text.length > 0){
+        state.captions.push({mine:true, text});
+        if(state.screen === 'call') render();
+        const targetLang = state.myLang === 'es' ? 'English' : 'Spanish';
+        const translated = await translateText(text, targetLang);
+        sendCaption(text, translated);
+      }
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if(e.error === 'no-speech' || e.error === 'aborted') return;
+    console.warn('speech recognition error', e.error);
+  };
+
+  recognition.onend = () => {
+    if(recognitionShouldRun && state.micOn){
+      try{ recognition.start(); }catch(e){}
+    }
+  };
+
+  try{ recognition.start(); }catch(e){}
+}
+
+function updateSpeakingUI(){
+  const ring = document.querySelector('.mic-ring');
+  if(ring) ring.classList.toggle('speaking', state.speaking);
+}
+
+async function translateText(text, targetLang){
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: `Translate the following into ${targetLang}. Respond with ONLY the translation, no preamble, no quotes, no explanation:\n\n${text}`
+        }]
+      })
+    });
+    const data = await response.json();
+    const textBlock = data.content?.find(b => b.type === 'text');
+    return textBlock ? textBlock.text.trim() : text;
+  }catch(e){
+    console.error('translation error', e);
+    return text;
+  }
+}
+
+function speakText(text, lang){
+  if(!('speechSynthesis' in window)) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang === 'es' ? 'es-MX' : 'en-US';
+  speechSynthesis.speak(utter);
+}
+
+function toggleMic(){
+  state.micOn = !state.micOn;
+  if(localStream){
+    localStream.getAudioTracks().forEach(t => t.enabled = state.micOn);
+  }
+  if(!state.micOn){
+    recognitionShouldRun = false;
+    try{ recognition && recognition.stop(); }catch(e){}
+  } else {
+    recognitionShouldRun = true;
+    try{ recognition && recognition.start(); }catch(e){}
+  }
+  render();
+}
+
+// ---------- Boot ----------
+
+function boot(){
+  const hash = location.hash;
+  const match = hash.match(/room=([a-z0-9]+)/i);
+  if(match){
+    state.roomId = match[1];
+  }
+  render();
+}
+
+boot();
+</script>
+</body>
+</html>
